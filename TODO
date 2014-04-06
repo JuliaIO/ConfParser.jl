@@ -1,0 +1,6 @@
+TODO
+- add logic for writing/replacing data in configuration files
+- write a variation of the split function that removes whitespace from elements
+- added try catches to param methods
+- cleanup and optimize
+- rinse, repeat...
