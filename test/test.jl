@@ -5,7 +5,8 @@ using ConfParser
 function main()
     conf = ConfParse("config.ini")
     parse_conf!(conf)
-    println(conf.data)
+    println(param(conf, ["block" => "lolol", "key" => "foo"]))
+    println(param(conf, "haha"))
 end
 
 main()

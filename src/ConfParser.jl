@@ -7,16 +7,25 @@ ConfParse,
 
 # functions
 parse_conf!,
-get_field
+param
+
 
 # contains information of the configuration file such as
 # file name, syntax, and the file handler for IO ops
+
 type ConfParse
     file_handle::IO
     file_name::String
     syntax::String
     data::Dict
 
+    ############################################################    
+    # ConfParse
+    # ---------
+    # constructor for ConfParse type.  Sets file_name,
+    # file_handle, and syntax fields
+    ############################################################
+    
     function ConfParse(file_name::String, syntax::String = "")
         self = new()
         if (isempty(file_name))
@@ -24,11 +33,7 @@ type ConfParse
         end
 
         self.file_name = file_name
-        try
-            self.file_handle = open(file_name, "r")
-        catch
-            error("configuration file could not be opened")
-        end
+        self.file_handle = _open_fh(file_name, "r")
 
         if (isempty(syntax))
             self.syntax = _guess_syntax(self.file_handle)
@@ -43,14 +48,32 @@ type ConfParse
 
         self.data = Dict()
         return self
-    end
+    end # function ConfParse
 
 end # type ConfigParser
 
-# guess_syntax
+############################################################
+# _open_fh
+# --------
+# open file handler for IO
+############################################################
+
+function _open_fh(file_name::String, mode::String)
+    local fh::IO
+    try
+        fh = open(file_name, mode)
+    catch
+        error("configuration file could not be opened")
+    end
+    fh
+end
+
+############################################################
+# _guess_syntax
 # ------------
 # attempts to guess the configuration file syntax using
 # regular expressions
+############################################################
 
 function _guess_syntax(fh::IO)
     local syntax::String
@@ -103,11 +126,12 @@ function _guess_syntax(fh::IO)
 
 end # function guess_syntax
 
-
+############################################################
 # parse_conf!
 # -----------
 # tasks appropriate parser method based on configuration
 # syntax
+############################################################
 
 function parse_conf!(self::ConfParse)
     if (self.syntax == "ini")
@@ -121,14 +145,15 @@ function parse_conf!(self::ConfParse)
     end
 end # function parse_conf
 
-
+############################################################
 # _parse_ini
 # ----------
 # parses configuration files utilizing ini sytnax.
 # Populate the ConfParser.data dictionary
+############################################################
 
 function _parse_ini(self::ConfParse)
-    local blockname::String
+    local blockname::Any = nothing
     seekstart(self.file_handle)
     
     for line in eachline(self.file_handle)
@@ -151,26 +176,31 @@ function _parse_ini(self::ConfParse)
             continue
         end
 
-        # parse key/values
+        # parse key/value
         m = match(r"^\s*([^=]*\w)\s*=\s*(.*)\s*$", line)
         if (m != nothing)
             key, values = m.captures
-            if (haskey(self.data, blockname))
-                push!(self.data[blockname], [key => split(values, ",")])
+            if (blockname != nothing)
+                if (!haskey(self.data, blockname))
+                    self.data[blockname] = [key => split(values, ",")]
+                else
+                    merge!(self.data[blockname], [key => split(values, ",")])
+                end
             else
-                self.data[blockname] = [[key => split(values, ",")]]
+                self.data[key] = split(values, ",")
             end
-
             continue
         end
         error("invalid syntax on line: $(line)")
     end
 end # function _parse_ini
 
+############################################################
 # _parse_http
 # -----------
 # parses configuration files utilizing http sytnax.
 # Populate the ConfParser.data dictionary
+############################################################
 
 function _parse_http(self::ConfParse)
     seekstart(self.file_handle)
@@ -199,10 +229,12 @@ function _parse_http(self::ConfParse)
     end
 end # function _parse_http
 
+############################################################
 # _parse_simple
 # -------------
 # parses configuration files utilizing simple syntax.
 # Populates the ConfParser.data dictionary
+############################################################
 
 function _parse_simple(self::ConfParse)
     seekstart(self.file_handle)
@@ -230,26 +262,47 @@ function _parse_simple(self::ConfParse)
     end
 end # function _parse_simple
 
-# get_field
-# -------------
-# returns field based on parameters
+############################################################
+# param
+# -----
+# for retrieving data outside of a block
+############################################################
 
-function get_field(self::ConfParse, key::String = "", block::String = "")
-    
-    # for non-ini syntaxes
-    if (isempty(block))
-        if (isempty(key))
-            return self.data
-        end
-        return self.data[key]
-    end
+function param(self::ConfParse, key::String)
+    return self.data[key]   
+end # method param
 
-    # for ini syntax
-    if (isempty(key))
-        return self.data[block]
-    end
-    
+############################################################
+# param
+# -----
+# for setting new values in a configuration file outside of
+# a block
+############################################################
+
+function param(self::ConfParse, key::String, new_value::String)
+
+end # method param
+
+############################################################
+# param
+# -----
+# for retrieving data from an ini config file block
+############################################################
+
+function param(self::ConfParse, index::Dict{ASCIIString, ASCIIString})
+    block::String = index["block"]
+    key::String = index["key"]
     return self.data[block][key]
-end # function get_param
+end # method param
+
+############################################################
+# param
+# -----
+# for setting new values in a ini config file block
+############################################################
+
+function param(self::ConfParse, index::Dict{ASCIIString, ASCIIString}, new_value::String)
+
+end # method param
 
 end # module ConfParser
