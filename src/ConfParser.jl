@@ -146,6 +146,29 @@ function parse_conf!(self::ConfParse)
 end # function parse_conf
 
 ############################################################
+# _parse_line
+# -----------
+# Sperates by commas, removes newlines and such
+############################################################
+
+function _parse_line(line::String)
+    parsed::Array = (String)[]
+    splitted::Array = split(line, ",")
+    for raw = splitted
+        if (ismatch(r"\S+", raw))
+            clean = match(r"\S+", raw)
+            push!(parsed, clean.match)
+        end
+    end
+
+    if (length(parsed) == 1)
+        return parsed[1]
+    end
+
+    parsed
+end # function _parse_line
+
+############################################################
 # _parse_ini
 # ----------
 # parses configuration files utilizing ini sytnax.
@@ -182,12 +205,12 @@ function _parse_ini(self::ConfParse)
             key, values = m.captures
             if (blockname != nothing)
                 if (!haskey(self.data, blockname))
-                    self.data[blockname] = [key => split(values, ",")]
+                    self.data[blockname] = [key => _parse_line(values)]
                 else
-                    merge!(self.data[blockname], [key => split(values, ",")])
+                    merge!(self.data[blockname], [key => _parse_line(values)])
                 end
             else
-                self.data[key] = split(values, ",")
+                self.data[key] = _parse_line(values)
             end
             continue
         end
@@ -221,7 +244,7 @@ function _parse_http(self::ConfParse)
         m = match(r"^\s*([\w-]+)\s*:\s*(.*)$", line)
         if (m != nothing)
             key, values = m.captures
-            self.data[key] = split(values, ",")
+            self.data[key] = _parse_line(values)
             continue
         end
 
@@ -254,7 +277,7 @@ function _parse_simple(self::ConfParse)
         m = match(r"^\s*([\w-]+)\s+(.*)\s*$", line)
         if (m != nothing)
             key, values = m.captures
-            self.data[key] = split(values, ",")
+            self.data[key] = _parse_line(values)
             continue
         end
 
