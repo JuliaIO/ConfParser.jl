@@ -298,17 +298,6 @@ end # method param
 ############################################################
 # param
 # -----
-# for setting new values in a configuration file outside of
-# a block
-############################################################
-
-function param(self::ConfParse, key::String, new_value::String)
-
-end # method param
-
-############################################################
-# param
-# -----
 # for retrieving data from an ini config file block
 ############################################################
 
@@ -316,16 +305,6 @@ function param(self::ConfParse, index::Dict{ASCIIString, ASCIIString})
     block::String = index["block"]
     key::String = index["key"]
     return self.data[block][key]
-end # method param
-
-############################################################
-# param
-# -----
-# for setting new values in a ini config file block
-############################################################
-
-function param(self::ConfParse, index::Dict{ASCIIString, ASCIIString}, new_value::String)
-
 end # method param
 
 end # module ConfParser
