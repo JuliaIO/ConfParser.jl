@@ -1,6 +1,7 @@
-# fsdafsadf
-foo : bar
-# fdasfadf
-# fdafsadf
-bar : foo
-foobar:barfoo
+# this is a comment
+email:juliarocks@socks.com
+password:qwerty
+
+# this is another comment
+url:julialang.org
+foobars:foo,bar
