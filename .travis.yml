@@ -1,0 +1,17 @@
+language: cpp
+compiler:
+    - clang
+notifications:
+    email: false
+before_install:
+    - sudo add-apt-repository ppa:staticfloat/julia-deps -y
+    - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y
+    - sudo apt-get update -qq -y
+    - sudo apt-get install libpcre3-dev julia -y
+script:
+    - julia -e "Pkg.init()"
+    - mkdir -p ~/.julia/ConfParser
+    - cp -R ./* ~/.julia/ConfParser/
+    - julia ~/.julia/ConfParser/test/testini.jl
+    - julia ~/.julia/ConfParser/test/testhttp.jl
+    - julia ~/.julia/ConfParser/test/testsimple.jl
