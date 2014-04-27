@@ -1,42 +1,44 @@
 ##ConfParser.jl
-ConfParser is a package for parsing configuration files.  Currently, ConfParser
-parses files utilizing ini, http, and simple configuration syntaxes.
+ConfParser is a package for parsing, modifying, and writing to configuration
+files.  ConfParser can handle configuration files utilizing multiple syntaxes
+to include INI, HTTP, and simple.
 
 ####INI Files
 
 ```
-# this config file uses ini syntax
-header=juliarocks
+header=leheader
 
-# this is a comment
+; this is a comment
 [database]
 user=dbuser
 password=abc123
 host=localhost
 
-# this is another comment
+; this is another comment
 [foobarness]
-foo=bar
+foo=bar,foo
 foobar=barfoo
 ```
 
 ```julia
 using ConfParser
 
-conf = ConfParse("config.ini")
+conf = ConfParse("confs/config.ini")
 parse_conf!(conf)
 
-header  = param(conf, "header")
-user     = param(conf, ["block" => "database", "key" => "user"])
-password = param(conf, ["block" => "database", "key" => "password"])
-host     = param(conf, ["block" => "database", "key" => "host"])
+# get parameters
+user     = retrieve(conf, ["block" => "database", "key" => "user"])
+password = retrieve(conf, ["block" => "database", "key" => "password"])
+host     = retrieve(conf, ["block" => "database", "key" => "host"])
 
-println("Header: $header")
-println("User: $user Password: $password Host: $host")
+# replace entry
+commit!(conf, ["block" => "database", "key" => "user"], "newuser")
 
-# $ julia testini.jl
-# Header: juliarocks
-# User: dbuser Password: abc123 Host: localhost
+# erase a block
+erase!(conf, "foobarness")
+
+# save to another file
+save!(conf, "testout.ini")
 ```
 
 ####HTTP Files
@@ -48,35 +50,25 @@ password:qwerty
 
 # this is another comment
 url:julialang.org
-foobars:foo,bar
+foobars:foo,bar,snafu
 ```
 
 ```julia
 using ConfParser
 
-conf = ConfParse("config.http")
+conf = ConfParse("confs/config.http")
 parse_conf!(conf)
 
-email    = param(conf, "email")
-password = param(conf, "password")
+# store config items in vars
+email    = retrieve(conf, "email")
+password = retrieve(conf, "password")
+foobars  = retrieve(conf, "foobars")
 
-# gets multiple values seperated by comma
-foobars  = param(conf, "foobars")
+# modify email parameter
+commit!(conf, "email", "newemail@test.com")
 
-println("Email: $email Password: $password")
-
-# print values in foobars line
-println("Foobars:")
-for value = foobars
-    println("- $value")
-end
-
-# $ julia testhttp.jl
-# Email: juliarocks@socks.com Password: qwerty
-# Foobars:
-# - foo
-# - bar
-
+# save changes
+save!(conf)
 ```
 
 ####Simple Files
@@ -94,17 +86,17 @@ foobar barfoo
 ```julia
 using ConfParser
 
-conf = ConfParse("config.simple")
+conf = ConfParse("confs/config.simple")
 parse_conf!(conf)
 
-protocol = param(conf, "protocol")
-port     = param(conf, "port")
-user     = param(conf, "user")
+# store config items in vars
+protocol = retrieve(conf, "protocol")
+port     = retrieve(conf, "port")
+user     = retrieve(conf, "user")
 
-println("Protocol: $protocol Port: $port")
-println("User: $user")
+# remove protocol element
+erase!(conf, "protocol")
 
-# $ julia testsimple.jl
-# Protocol: kreberos Port: 6643
-# User: root
+# save to new file
+save!(conf, "outconf.simple")
 ```

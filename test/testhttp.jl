@@ -1,8 +1,11 @@
 using ConfParser
 
-conf = ConfParse("config.http")
+conf = ConfParse("confs/config.http")
 parse_conf!(conf)
 
-email    = param(conf, "email")
-password = param(conf, "password")
-foobars  = param(conf, "foobars")
+email    = retrieve(conf, "email")
+password = retrieve(conf, "password")
+foobars  = retrieve(conf, "foobars")
+
+commit!(conf, "email", "newemail@test.com")
+save!(conf, "outhttp.ini")

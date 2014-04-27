@@ -7,17 +7,20 @@ ConfParse,
 
 # functions
 parse_conf!,
-param
+erase!,
+save!,
+retrieve,
+commit!
 
 
 # contains information of the configuration file such as
 # file name, syntax, and the file handler for IO ops
-
 type ConfParse
-    file_handle::IO
-    file_name::String
-    syntax::String
-    data::Dict
+    _file_handle::IO
+    _file_name::String
+    _syntax::String
+    _data::Dict
+    _is_modified::Bool
 
     ############################################################    
     # ConfParse
@@ -32,21 +35,22 @@ type ConfParse
             error("no file name specified")
         end
 
-        self.file_name = file_name
-        self.file_handle = _open_fh(file_name, "r")
+        self._file_name = file_name
 
         if (isempty(syntax))
-            self.syntax = _guess_syntax(self.file_handle)
+            self._file_handle = _open_fh(file_name, "r")
+            self._syntax = _guess_syntax(self._file_handle)
         else
             if ((syntax != "ini")  &&
                 (syntax != "http") &&
                 (syntax != "simple"))
                 error("unknown configuration syntax: $(syntax)")
             end
-            self.syntax = syntax
+            self._syntax = syntax
         end
 
-        self.data = Dict()
+        self._data = Dict()
+        self._is_modified = false
         return self
     end # function ConfParse
 
@@ -77,7 +81,6 @@ end
 
 function _guess_syntax(fh::IO)
     local syntax::String
-
     for line in eachline(fh)
         
         # is a commented line
@@ -134,14 +137,14 @@ end # function guess_syntax
 ############################################################
 
 function parse_conf!(self::ConfParse)
-    if (self.syntax == "ini")
+    if (self._syntax == "ini")
         _parse_ini(self)
-    elseif (self.syntax == "http")
+    elseif (self._syntax == "http")
         _parse_http(self)
-    elseif (self.syntax == "simple")
+    elseif (self._syntax == "simple")
         _parse_simple(self)
     else
-        error("unknown configuration syntax: $(self.syntax)")
+        error("unknown configuration syntax: $(self._syntax)")
     end
 end # function parse_conf
 
@@ -161,10 +164,6 @@ function _parse_line(line::String)
         end
     end
 
-    if (length(parsed) == 1)
-        return parsed[1]
-    end
-
     parsed
 end # function _parse_line
 
@@ -176,13 +175,13 @@ end # function _parse_line
 ############################################################
 
 function _parse_ini(self::ConfParse)
-    local blockname::Any = nothing
-    seekstart(self.file_handle)
+    local blockname::String = "default"
+    seekstart(self._file_handle)
     
-    for line in eachline(self.file_handle)
+    for line in eachline(self._file_handle)
         local m::Any
         # skip comments and newlines
-        if (ismatch(r"^\s*(?:#|$)", line))
+        if (ismatch(r"^\s*(\n|\#|;)", line))
             continue
         end
 
@@ -203,14 +202,10 @@ function _parse_ini(self::ConfParse)
         m = match(r"^\s*([^=]*\w)\s*=\s*(.*)\s*$", line)
         if (m != nothing)
             key, values = m.captures
-            if (blockname != nothing)
-                if (!haskey(self.data, blockname))
-                    self.data[blockname] = [key => _parse_line(values)]
-                else
-                    merge!(self.data[blockname], [key => _parse_line(values)])
-                end
+            if (!haskey(self._data, blockname))
+                self._data[blockname] = [key => _parse_line(values)]
             else
-                self.data[key] = _parse_line(values)
+                merge!(self._data[blockname], [key => _parse_line(values)])
             end
             continue
         end
@@ -226,12 +221,12 @@ end # function _parse_ini
 ############################################################
 
 function _parse_http(self::ConfParse)
-    seekstart(self.file_handle)
+    seekstart(self._file_handle)
 
-    for line in eachline(self.file_handle)
+    for line in eachline(self._file_handle)
         local m::Any
         # skip comments and newlines
-        if (ismatch(r"^\s*(?:#|$)", line))
+        if (ismatch(r"^\s*(\n|\#|;)", line))
             continue
         end
 
@@ -244,7 +239,7 @@ function _parse_http(self::ConfParse)
         m = match(r"^\s*([\w-]+)\s*:\s*(.*)$", line)
         if (m != nothing)
             key, values = m.captures
-            self.data[key] = _parse_line(values)
+            self._data[key] = _parse_line(values)
             continue
         end
 
@@ -260,11 +255,11 @@ end # function _parse_http
 ############################################################
 
 function _parse_simple(self::ConfParse)
-    seekstart(self.file_handle)
+    seekstart(self._file_handle)
 
-    for line in eachline(self.file_handle)
+    for line in eachline(self._file_handle)
         # skip comments and newlines
-        if (ismatch(r"^\s*(?:#|$)", line))
+        if (ismatch(r"^\s*(\n|\#|;)", line))
             continue
         end
 
@@ -277,7 +272,7 @@ function _parse_simple(self::ConfParse)
         m = match(r"^\s*([\w-]+)\s+(.*)\s*$", line)
         if (m != nothing)
             key, values = m.captures
-            self.data[key] = _parse_line(values)
+            self._data[key] = _parse_line(values)
             continue
         end
 
@@ -286,25 +281,174 @@ function _parse_simple(self::ConfParse)
 end # function _parse_simple
 
 ############################################################
-# param
+# _craft_content
+# --------------
+# craft content strings from data array for saved config
+############################################################
+
+function _craft_content(self::ConfParse)
+   local content::String = ""
+   
+   if (self._syntax == "ini")
+        for (block, key_values) = self._data
+            content *= "[$block]\n"
+            for (key, values) = key_values
+                if (typeof(values) == Array{String, 1})
+                    content *= "$key=$(join(values, ","))\n"
+                else
+                    content *= "$key=$values\n"
+                end
+            end
+            content *= "\n"
+        end
+
+    elseif (self._syntax == "http")
+        for (key, values) = self._data
+            if (typeof(values) == Array{String, 1})
+                content *= "$key: $(join(values, ","))\n"
+            else
+                content *= "$key: $values\n"
+            end
+        end
+
+    elseif (self._syntax == "simple")
+        for (key, values) = self._data
+            if (typeof(values) == Array{String, 1})
+                content *= "$key $(join(values, ","))\n"
+            else
+                content *= "$key $values\n"
+            end
+        end
+
+    else
+        error("unknown syntax type: $(self._syntax)")
+    end
+
+    println(content)
+
+    content
+end # function _craft_content
+
+############################################################
+# erase!
+# ------
+# remove entry from inside ini block
+############################################################
+
+function erase!(self::ConfParse, index::Dict{ASCIIString, ASCIIString})
+    local block::String = index["block"]
+    local key::String   = index["key"]
+
+    local block_key = getkey(self._data, block, nothing)
+    if (block_key != nothing)
+        if (haskey(self._data[block_key], key))
+            delete!(self._data[block_key], key)
+        end
+    end
+
+    self._is_modified = true
+end # method erase!
+
+############################################################
+# erase!
+# ------
+# remove entry from config (outside of block if ini)
+############################################################
+
+function erase!(self::ConfParse, key::String)
+    if (haskey(self._data, key))
+        delete!(self._data, key)
+    end
+
+    self._is_modified = true
+end # method erase!
+
+############################################################
+# save
+# -----
+# for writing out new or modified configuration files
+############################################################
+
+function save!(self::ConfParse, file_name::Any = nothing)
+    # if data has not been modified and a new file has not
+    # been specified, don't write out
+    if (self._is_modified == false) && (file_name == nothing)
+        return
+    end
+
+    # if there is no content to write out, don't create an
+    # empty file
+    content = _craft_content(self)
+    if (content == nothing)
+        return
+    end
+
+    if (file_name == nothing)
+        self._file_handle = _open_fh(self._file_name, "w")
+    else
+        self._file_handle = _open_fh(file_name, "w")
+    end
+
+    write(self._file_handle, content)
+end # function save
+
+############################################################
+# retrieve
 # -----
 # for retrieving data outside of a block
 ############################################################
 
-function param(self::ConfParse, key::String)
-    return self.data[key]   
-end # method param
+function retrieve(self::ConfParse, key::String)
+    if (length(self._data[key]) == 1)
+        return self._data[key][1]
+    end
+    
+    self._data[key] 
+end # method retrieve
 
 ############################################################
-# param
+# retrieve
 # -----
 # for retrieving data from an ini config file block
 ############################################################
 
-function param(self::ConfParse, index::Dict{ASCIIString, ASCIIString})
-    block::String = index["block"]
-    key::String = index["key"]
-    return self.data[block][key]
-end # method param
+function retrieve(self::ConfParse, index::Dict{ASCIIString, ASCIIString})
+    local block::String = index["block"]
+    local key::String   = index["key"]
+
+    if (length(self._data[block][key]) == 1)
+        return self._data[block][key][1]
+    end
+
+    self._data[block][key]
+end # method retrieve
+
+############################################################
+# commit!
+# -----
+# for inserting data in a config file
+############################################################
+
+function commit!(self::ConfParse, key::String, value::Any)
+    self._data[key] = value
+    self._is_modified = true
+end # method commit!
+
+############################################################
+# commit!
+# -----
+# for inserting data inside an ini file block
+############################################################
+
+function commit!(self::ConfParse, index::Dict{ASCIIString, ASCIIString}, values::ASCIIString)
+    if (self._syntax != "ini")
+        error("invalid setter method called for syntax type: $(self._syntax)")
+    end
+
+    local block::String = index["block"]
+    local key::String   = index["key"]
+    self._data[block] = [key => _parse_line(values)]
+    self._is_modified = true
+end # method commit!
 
 end # module ConfParser

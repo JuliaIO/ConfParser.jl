@@ -1,8 +1,12 @@
 using ConfParser
 
-conf = ConfParse("config.simple")
+conf = ConfParse("confs/config.simple")
 parse_conf!(conf)
 
-protocol = param(conf, "protocol")
-port     = param(conf, "port")
-user     = param(conf, "user")
+protocol = retrieve(conf, "protocol")
+port     = retrieve(conf, "port")
+user     = retrieve(conf, "user")
+
+erase!(conf, "protocol")
+
+save!(conf, "outconf.simple")
