@@ -3,6 +3,25 @@ ConfParser is a package for parsing, modifying, and writing to configuration
 files.  ConfParser can handle configuration files utilizing multiple syntaxes
 to include INI, HTTP, and simple.
 
+###Functions
+
+####parse_conf!
+Reads, parses, and stores configuration file parameters in a dictionary.
+
+####retrieve
+Returns a parsed configuration file parameter.
+
+####commit!
+Writes new configuration file elements into the configuration parameter dictionary.
+
+####erase!
+Removes an entry from the configuration parameter dictionary.
+
+####save!
+Generates and saves configuration dictionary parameters in specified configuration syntax.
+
+###Examples
+
 ####INI Files
 
 ```
@@ -26,15 +45,15 @@ using ConfParser
 conf = ConfParse("confs/config.ini")
 parse_conf!(conf)
 
-# get parameters
-user     = retrieve(conf, ["block" => "database", "key" => "user"])
-password = retrieve(conf, ["block" => "database", "key" => "password"])
-host     = retrieve(conf, ["block" => "database", "key" => "host"])
+# get and store config parameters
+user     = retrieve(conf, "database", "user")
+password = retrieve(conf, "database", "password")
+host     = retrieve(conf, "database", "host")
 
-# replace entry
-commit!(conf, ["block" => "database", "key" => "user"], "newuser")
+# replace config paramater
+commit!(conf, "database", "user", "newuser")
 
-# erase a block
+# erase a config block
 erase!(conf, "foobarness")
 
 # save to another file
@@ -59,12 +78,12 @@ using ConfParser
 conf = ConfParse("confs/config.http")
 parse_conf!(conf)
 
-# store config items in vars
+# get and store config parameters
 email    = retrieve(conf, "email")
 password = retrieve(conf, "password")
 foobars  = retrieve(conf, "foobars")
 
-# modify email parameter
+# modify config parameter
 commit!(conf, "email", "newemail@test.com")
 
 # save changes
@@ -94,9 +113,9 @@ protocol = retrieve(conf, "protocol")
 port     = retrieve(conf, "port")
 user     = retrieve(conf, "user")
 
-# remove protocol element
+# remove config parameter
 erase!(conf, "protocol")
 
-# save to new file
+# generate new config from data
 save!(conf, "outconf.simple")
 ```
