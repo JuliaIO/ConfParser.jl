@@ -1,11 +1,11 @@
 using ConfParser
+using Base.Test
 
 conf = ConfParse("confs/config.http")
 parse_conf!(conf)
 
-email    = retrieve(conf, "email")
-password = retrieve(conf, "password")
-foobars  = retrieve(conf, "foobars")
+@test retrieve(conf, "email")    == "juliarocks@socks.com"
+@test retrieve(conf, "password") == "qwerty"
+@test commit!(conf, "email", "newemail@test.com") == true
 
-commit!(conf, "email", "newemail@test.com")
-save!(conf, "outhttp.ini")
+save!(conf, "confs/out.conf")

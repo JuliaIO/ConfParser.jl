@@ -17,19 +17,19 @@ commit!
 # file name, syntax, and the file handler for IO ops
 type ConfParse
     _file_handle::IO
-    _file_name::String
-    _syntax::String
+    _file_name::ASCIIString
+    _syntax::ASCIIString
     _data::Dict
     _is_modified::Bool
 
-    ############################################################    
+    ############################################################
     # ConfParse
     # ---------
     # constructor for ConfParse type.  Sets file_name,
     # file_handle, and syntax fields
     ############################################################
-    
-    function ConfParse(file_name::String, syntax::String = "")
+
+    function ConfParse(file_name::ASCIIString, syntax::ASCIIString = "")
         self = new()
         if (isempty(file_name))
             error("no file name specified")
@@ -49,7 +49,7 @@ type ConfParse
             self._syntax = syntax
         end
 
-        self._data = Dict()
+        self._data        = Dict()
         self._is_modified = false
         return self
     end # function ConfParse
@@ -62,7 +62,7 @@ end # type ConfigParser
 # open file handler for IO
 ############################################################
 
-function _open_fh(file_name::String, mode::String)
+function _open_fh(file_name::ASCIIString, mode::ASCIIString)
     local fh::IO
     try
         fh = open(file_name, mode)
@@ -80,9 +80,9 @@ end
 ############################################################
 
 function _guess_syntax(fh::IO)
-    local syntax::String
+    local syntax::ASCIIString
     for line in eachline(fh)
-        
+
         # is a commented line
         if (ismatch(r"^\s*(?:#|$)", line))
             continue
@@ -124,9 +124,8 @@ function _guess_syntax(fh::IO)
     if (syntax != "")
         return syntax
     end
-    
-    error("unable to identify the configuration file syntax")
 
+    error("unable to identify the configuration file syntax")
 end # function guess_syntax
 
 ############################################################
@@ -154,8 +153,8 @@ end # function parse_conf
 # Sperates by commas, removes newlines and such
 ############################################################
 
-function _parse_line(line::String)
-    parsed::Array = (String)[]
+function _parse_line(line::ASCIIString)
+    parsed::Array   = (String)[]
     splitted::Array = split(line, ",")
     for raw = splitted
         if (ismatch(r"\S+", raw))
@@ -175,9 +174,9 @@ end # function _parse_line
 ############################################################
 
 function _parse_ini(self::ConfParse)
-    local blockname::String = "default"
+    local blockname::ASCIIString = "default"
     seekstart(self._file_handle)
-    
+
     for line in eachline(self._file_handle)
         local m::Any
         # skip comments and newlines
@@ -201,7 +200,7 @@ function _parse_ini(self::ConfParse)
         # parse key/value
         m = match(r"^\s*([^=]*\w)\s*=\s*(.*)\s*$", line)
         if (m != nothing)
-            key, values = m.captures
+            key::ASCIIString, values::ASCIIString = m.captures
             if (!haskey(self._data, blockname))
                 self._data[blockname] = [key => _parse_line(values)]
             else
@@ -235,10 +234,10 @@ function _parse_http(self::ConfParse)
         end
 
         line = chomp(line)
-        
+
         m = match(r"^\s*([\w-]+)\s*:\s*(.*)$", line)
         if (m != nothing)
-            key, values = m.captures
+            key::ASCIIString, values::ASCIIString = m.captures
             self._data[key] = _parse_line(values)
             continue
         end
@@ -268,10 +267,10 @@ function _parse_simple(self::ConfParse)
         end
 
         line = chomp(line)
-        
+
         m = match(r"^\s*([\w-]+)\s+(.*)\s*$", line)
         if (m != nothing)
-            key, values = m.captures
+            key::ASCIIString, values::ASCIIString = m.captures
             self._data[key] = _parse_line(values)
             continue
         end
@@ -287,8 +286,8 @@ end # function _parse_simple
 ############################################################
 
 function _craft_content(self::ConfParse)
-   local content::String = ""
-   
+   local content::ASCIIString = ""
+
    if (self._syntax == "ini")
         for (block, key_values) = self._data
             content *= "[$block]\n"
@@ -335,9 +334,9 @@ end # function _craft_content
 # remove entry from inside ini block
 ############################################################
 
-function erase!(self::ConfParse, index::Dict{ASCIIString, ASCIIString})
-    local block::String = index["block"]
-    local key::String   = index["key"]
+function erase!(self::ConfParse, index::Dict{String, String})
+    local block::ASCIIString = index["block"]
+    local key::ASCIIString   = index["key"]
 
     local block_key = getkey(self._data, block, nothing)
     if (block_key != nothing)
@@ -355,7 +354,7 @@ end # method erase!
 # remove entry from config (outside of block if ini)
 ############################################################
 
-function erase!(self::ConfParse, key::String)
+function erase!(self::ConfParse, key::ASCIIString)
     if (haskey(self._data, key))
         delete!(self._data, key)
     end
@@ -398,12 +397,12 @@ end # function save
 # for retrieving data outside of a block
 ############################################################
 
-function retrieve(self::ConfParse, key::String)
+function retrieve(self::ConfParse, key::ASCIIString)
     if (length(self._data[key]) == 1)
         return self._data[key][1]
     end
-    
-    self._data[key] 
+
+    self._data[key]
 end # method retrieve
 
 ############################################################
@@ -412,9 +411,7 @@ end # method retrieve
 # for retrieving data from an ini config file block
 ############################################################
 
-function retrieve(self::ConfParse, index::Dict{ASCIIString, ASCIIString})
-    local block::String = index["block"]
-    local key::String   = index["key"]
+function retrieve(self::ConfParse, block::ASCIIString, key::ASCIIString)
 
     if (length(self._data[block][key]) == 1)
         return self._data[block][key][1]
@@ -429,8 +426,8 @@ end # method retrieve
 # for inserting data in a config file
 ############################################################
 
-function commit!(self::ConfParse, key::String, value::Any)
-    self._data[key] = value
+function commit!(self::ConfParse, key::ASCIIString, value::Any)
+    self._data[key]   = value
     self._is_modified = true
 end # method commit!
 
@@ -440,15 +437,13 @@ end # method commit!
 # for inserting data inside an ini file block
 ############################################################
 
-function commit!(self::ConfParse, index::Dict{ASCIIString, ASCIIString}, values::ASCIIString)
+function commit!(self::ConfParse, block::ASCIIString, key::ASCIIString, values::ASCIIString)
     if (self._syntax != "ini")
         error("invalid setter method called for syntax type: $(self._syntax)")
     end
 
-    local block::String = index["block"]
-    local key::String   = index["key"]
-    self._data[block] = [key => _parse_line(values)]
-    self._is_modified = true
+    self._data[block][key] = [values]
+    self._is_modified      = true
 end # method commit!
 
 end # module ConfParser

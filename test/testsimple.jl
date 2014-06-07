@@ -1,12 +1,11 @@
 using ConfParser
+using Base.Test
 
 conf = ConfParse("confs/config.simple")
 parse_conf!(conf)
 
-protocol = retrieve(conf, "protocol")
-port     = retrieve(conf, "port")
-user     = retrieve(conf, "user")
+@test retrieve(conf, "protocol") == "kreberos"
+@test retrieve(conf, "port")     == "6643"
+@test erase!(conf, "protocol")   == true
 
-erase!(conf, "protocol")
-
-save!(conf, "outconf.simple")
+save!(conf, "confs/out.conf")
