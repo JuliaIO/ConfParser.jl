@@ -334,10 +334,7 @@ end # function _craft_content
 # remove entry from inside ini block
 ############################################################
 
-function erase!(self::ConfParse, index::Dict{String, String})
-    local block::ASCIIString = index["block"]
-    local key::ASCIIString   = index["key"]
-
+function erase!(self::ConfParse, block::ASCIIString, key::ASCIIString)
     local block_key = getkey(self._data, block, nothing)
     if (block_key != nothing)
         if (haskey(self._data[block_key], key))
