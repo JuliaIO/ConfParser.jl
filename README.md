@@ -3,7 +3,7 @@ ConfParser is a package for parsing, modifying, and writing to configuration
 files.  ConfParser can handle configuration files utilizing multiple syntaxes
 to include INI, HTTP, and simple.
 
-###Functions
+###Synopsis
 
 ####parse_conf!
 Reads, parses, and stores configuration file parameters in a dictionary.
