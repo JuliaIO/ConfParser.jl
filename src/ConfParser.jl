@@ -323,8 +323,6 @@ function _craft_content(self::ConfParse)
         error("unknown syntax type: $(self._syntax)")
     end
 
-    println(content)
-
     content
 end # function _craft_content
 
