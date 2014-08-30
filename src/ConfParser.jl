@@ -35,7 +35,6 @@ type ConfParse
         end
 
         _filename = filename
-
         if (isempty(syntax))
             _fh = _open_fh(filename, "r")
             _syntax = _guess_syntax(_fh)
@@ -62,13 +61,12 @@ end # type ConfigParser
 ############################################################
 
 function _open_fh(filename::ASCIIString, mode::ASCIIString)
-    local fh::IO
     try
         fh = open(filename, mode)
+        return fh
     catch
         error("configuration file could not be opened")
     end
-    fh
 end
 
 ############################################################
@@ -79,7 +77,7 @@ end
 ############################################################
 
 function _guess_syntax(fh::IO)
-    local syntax::ASCIIString
+    syntax = ""
     for line in eachline(fh)
 
         # is a commented line
@@ -153,8 +151,8 @@ end # function parse_conf
 ############################################################
 
 function _parse_line(line::ASCIIString)
-    parsed::Array   = (String)[]
-    splitted::Array = split(line, ",")
+    parsed   = (String)[]
+    splitted = split(line, ",")
     for raw = splitted
         if (ismatch(r"\S+", raw))
             clean = match(r"\S+", raw)
@@ -173,10 +171,9 @@ end # function _parse_line
 ############################################################
 
 function _parse_ini(s::ConfParse)
-    local blockname::ASCIIString = "default"
+    blockname = "default"
     seekstart(s._fh)
     for line in eachline(s._fh)
-        local m::Any
         # skip comments and newlines
         if (ismatch(r"^\s*(\n|\#|;)", line))
             continue
@@ -220,7 +217,6 @@ end # function _parse_ini
 function _parse_http(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
-        local m::Any
         # skip comments and newlines
         if (ismatch(r"^\s*(\n|\#|;)", line))
             continue
@@ -282,7 +278,7 @@ end # function _parse_simple
 ############################################################
 
 function _craft_content(s::ConfParse)
-   local content::ASCIIString = ""
+   content = ""
    if (s._syntax == "ini")
         for (block, key_values) = s._data
             content *= "[$block]\n"
@@ -328,13 +324,13 @@ end # function _craft_content
 ############################################################
 
 function erase!(s::ConfParse, block::ASCIIString, key::ASCIIString)
-    local block_key = getkey(s._data, block, nothing)
+    block_key = getkey(s._data, block, nothing)
     if (block_key != nothing)
         if (haskey(s._data[block_key], key))
             delete!(s._data[block_key], key)
         end
     end
-
+    
     s._is_modified = true
 end # method erase!
 
@@ -348,7 +344,7 @@ function erase!(s::ConfParse, key::ASCIIString)
     if (haskey(s._data, key))
         delete!(s._data, key)
     end
-
+   
     s._is_modified = true
 end # method erase!
 
@@ -377,7 +373,7 @@ function save!(s::ConfParse, filename::Any = nothing)
     else
         s._fh = _open_fh(filename, "w")
     end
-
+    
     write(s._fh, content)
 end # function save
 
@@ -402,7 +398,6 @@ end # method retrieve
 ############################################################
 
 function retrieve(s::ConfParse, block::ASCIIString, key::ASCIIString)
-
     if (length(s._data[block][key]) == 1)
         return s._data[block][key][1]
     end
