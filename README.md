@@ -1,4 +1,5 @@
-##ConfParser.jl
+##ConfParser.jl [![Build Status](https://travis-ci.org/dotslashb/ConfParser.jl.svg?branch=master)](https://travis-ci.org/dotslashb/ConfParser.jl)
+
 ConfParser is a package for parsing, modifying, and writing to configuration
 files.  ConfParser can handle configuration files utilizing multiple syntaxes
 to include INI, HTTP, and simple.
