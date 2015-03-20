@@ -36,8 +36,8 @@ type ConfParse
 
         _filename = filename
         if (isempty(syntax))
-            _fh = _open_fh(filename, "r")
-            _syntax = _guess_syntax(_fh)
+            _fh = open_fh(filename, "r")
+            _syntax = guess_syntax(_fh)
         else
             if ((syntax != "ini")  &&
                 (syntax != "http") &&
@@ -52,15 +52,15 @@ type ConfParse
             _data, _is_modified)
     end # function ConfParse
 
-end # type ConfigParser
+end # type ConfParse
 
 ############################################################
-# _open_fh
+# open_fh
 # --------
 # open file handler for IO
 ############################################################
 
-function _open_fh(filename::ASCIIString, mode::ASCIIString)
+function open_fh(filename::ASCIIString, mode::ASCIIString)
     try
         fh = open(filename, mode)
         return fh
@@ -70,13 +70,13 @@ function _open_fh(filename::ASCIIString, mode::ASCIIString)
 end
 
 ############################################################
-# _guess_syntax
+# guess_syntax
 # ------------
 # attempts to guess the configuration file syntax using
 # regular expressions
 ############################################################
 
-function _guess_syntax(fh::IO)
+function guess_syntax(fh::IO)
     syntax = ""
     for line in eachline(fh)
 
@@ -134,23 +134,23 @@ end # function guess_syntax
 
 function parse_conf!(s::ConfParse)
     if (s._syntax == "ini")
-        _parse_ini(s)
+        parse_ini(s)
     elseif (s._syntax == "http")
-        _parse_http(s)
+        parse_http(s)
     elseif (s._syntax == "simple")
-        _parse_simple(s)
+        parse_simple(s)
     else
         error("unknown configuration syntax: $(s._syntax)")
     end
 end # function parse_conf
 
 ############################################################
-# _parse_line
+# parse_line
 # -----------
 # Sperates by commas, removes newlines and such
 ############################################################
 
-function _parse_line(line::ASCIIString)
+function parse_line(line::ASCIIString)
     parsed   = (String)[]
     splitted = split(line, ",")
     for raw = splitted
@@ -161,16 +161,16 @@ function _parse_line(line::ASCIIString)
     end
 
     parsed
-end # function _parse_line
+end # function parse_line
 
 ############################################################
-# _parse_ini
+# parse_ini
 # ----------
 # parses configuration files utilizing ini sytnax.
 # Populate the ConfParser.data dictionary
 ############################################################
 
-function _parse_ini(s::ConfParse)
+function parse_ini(s::ConfParse)
     blockname = "default"
     seekstart(s._fh)
     for line in eachline(s._fh)
@@ -197,24 +197,24 @@ function _parse_ini(s::ConfParse)
         if (m != nothing)
             key::ASCIIString, values::ASCIIString = m.captures
             if (!haskey(s._data, blockname))
-                s._data[blockname] = [key => _parse_line(values)]
+                s._data[blockname] = Dict(key => parse_line(values))
             else
-                merge!(s._data[blockname], [key => _parse_line(values)])
+                merge!(s._data[blockname], Dict(key => parse_line(values)))
             end
             continue
         end
         error("invalid syntax on line: $(line)")
     end
-end # function _parse_ini
+end # function parse_ini
 
 ############################################################
-# _parse_http
+# parse_http
 # -----------
 # parses configuration files utilizing http sytnax.
 # Populate the ConfParser.data dictionary
 ############################################################
 
-function _parse_http(s::ConfParse)
+function parse_http(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
@@ -231,22 +231,22 @@ function _parse_http(s::ConfParse)
         m = match(r"^\s*([\w-]+)\s*:\s*(.*)$", line)
         if (m != nothing)
             key::ASCIIString, values::ASCIIString = m.captures
-            s._data[key] = _parse_line(values)
+            s._data[key] = parse_line(values)
             continue
         end
 
         error("invalid syntax on line: $(line)")
     end
-end # function _parse_http
+end # function parse_http
 
 ############################################################
-# _parse_simple
+# parse_simple
 # -------------
 # parses configuration files utilizing simple syntax.
 # Populates the ConfParser.data dictionary
 ############################################################
 
-function _parse_simple(s::ConfParse)
+function parse_simple(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
@@ -263,21 +263,21 @@ function _parse_simple(s::ConfParse)
         m = match(r"^\s*([\w-]+)\s+(.*)\s*$", line)
         if (m != nothing)
             key::ASCIIString, values::ASCIIString = m.captures
-            s._data[key] = _parse_line(values)
+            s._data[key] = parse_line(values)
             continue
         end
 
         error("invalid syntax on line: $(line)")
     end
-end # function _parse_simple
+end # function parse_simple
 
 ############################################################
-# _craft_content
+# craft_content
 # --------------
 # craft content strings from data array for saved config
 ############################################################
 
-function _craft_content(s::ConfParse)
+function craft_content(s::ConfParse)
    content = ""
    if (s._syntax == "ini")
         for (block, key_values) = s._data
@@ -315,7 +315,7 @@ function _craft_content(s::ConfParse)
     end
 
     content
-end # function _craft_content
+end # function craft_content
 
 ############################################################
 # erase!
@@ -363,15 +363,15 @@ function save!(s::ConfParse, filename::Any = nothing)
 
     # if there is no content to write out, don't create an
     # empty file
-    content = _craft_content(s)
+    content = craft_content(s)
     if (content == nothing)
         return
     end
 
     if (filename == nothing)
-        s._fh = _open_fh(s._filename, "w")
+        s._fh = open_fh(s._filename, "w")
     else
-        s._fh = _open_fh(filename, "w")
+        s._fh = open_fh(filename, "w")
     end
     
     write(s._fh, content)
