@@ -1,33 +1,15 @@
 module ConfParser
 
-export
-
-# types
-ConfParse,
-
-# functions
-parse_conf!,
-erase!,
-save!,
-retrieve,
-commit!
+export ConfParse, parse_conf!, erase!,
+       save!, retrieve, commit!
 
 
-# contains information of the configuration file such as
-# file name, syntax, and the file handler for IO ops
 type ConfParse
     _fh::IO
     _filename::ASCIIString
     _syntax::ASCIIString
     _data::Dict
     _is_modified::Bool
-
-    ############################################################
-    # ConfParse
-    # ---------
-    # constructor for ConfParse type.  Sets filename,
-    # fh, and syntax fields
-    ############################################################
 
     function ConfParse(filename::ASCIIString, syntax::ASCIIString = "")
         if (isempty(filename))
@@ -54,12 +36,9 @@ type ConfParse
 
 end # type ConfParse
 
-############################################################
-# open_fh
-# --------
+#----------
 # open file handler for IO
-############################################################
-
+#----------
 function open_fh(filename::ASCIIString, mode::ASCIIString)
     try
         fh = open(filename, mode)
@@ -69,13 +48,10 @@ function open_fh(filename::ASCIIString, mode::ASCIIString)
     end
 end
 
-############################################################
-# guess_syntax
-# ------------
+#------------
 # attempts to guess the configuration file syntax using
 # regular expressions
-############################################################
-
+#----------
 function guess_syntax(fh::IO)
     syntax = ""
     for line in eachline(fh)
@@ -125,13 +101,10 @@ function guess_syntax(fh::IO)
     error("unable to identify the configuration file syntax")
 end # function guess_syntax
 
-############################################################
-# parse_conf!
-# -----------
-# tasks appropriate parser method based on configuration
+#----------
+# tasks appropriate parser function based on configuration
 # syntax
-############################################################
-
+#----------
 function parse_conf!(s::ConfParse)
     if (s._syntax == "ini")
         parse_ini(s)
@@ -144,12 +117,9 @@ function parse_conf!(s::ConfParse)
     end
 end # function parse_conf
 
-############################################################
-# parse_line
-# -----------
+#----------
 # Sperates by commas, removes newlines and such
-############################################################
-
+#----------
 function parse_line(line::ASCIIString)
     parsed   = (String)[]
     splitted = split(line, ",")
@@ -163,13 +133,10 @@ function parse_line(line::ASCIIString)
     parsed
 end # function parse_line
 
-############################################################
-# parse_ini
-# ----------
+#----------
 # parses configuration files utilizing ini sytnax.
 # Populate the ConfParser.data dictionary
-############################################################
-
+#----------
 function parse_ini(s::ConfParse)
     blockname = "default"
     seekstart(s._fh)
@@ -207,13 +174,10 @@ function parse_ini(s::ConfParse)
     end
 end # function parse_ini
 
-############################################################
-# parse_http
-# -----------
+#----------
 # parses configuration files utilizing http sytnax.
 # Populate the ConfParser.data dictionary
-############################################################
-
+#----------
 function parse_http(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
@@ -239,13 +203,10 @@ function parse_http(s::ConfParse)
     end
 end # function parse_http
 
-############################################################
-# parse_simple
-# -------------
+#----------
 # parses configuration files utilizing simple syntax.
 # Populates the ConfParser.data dictionary
-############################################################
-
+#----------
 function parse_simple(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
@@ -271,12 +232,9 @@ function parse_simple(s::ConfParse)
     end
 end # function parse_simple
 
-############################################################
-# craft_content
-# --------------
+#----------
 # craft content strings from data array for saved config
-############################################################
-
+#----------
 function craft_content(s::ConfParse)
    content = ""
    if (s._syntax == "ini")
@@ -317,12 +275,9 @@ function craft_content(s::ConfParse)
     content
 end # function craft_content
 
-############################################################
-# erase!
-# ------
+#----------
 # remove entry from inside ini block
-############################################################
-
+#----------
 function erase!(s::ConfParse, block::ASCIIString, key::ASCIIString)
     block_key = getkey(s._data, block, nothing)
     if (block_key != nothing)
@@ -332,28 +287,22 @@ function erase!(s::ConfParse, block::ASCIIString, key::ASCIIString)
     end
     
     s._is_modified = true
-end # method erase!
+end # function erase!
 
-############################################################
-# erase!
-# ------
+#----------
 # remove entry from config (outside of block if ini)
-############################################################
-
+#----------
 function erase!(s::ConfParse, key::ASCIIString)
     if (haskey(s._data, key))
         delete!(s._data, key)
     end
    
     s._is_modified = true
-end # method erase!
+end # function erase!
 
-############################################################
-# save
-# -----
+#----------
 # for writing out new or modified configuration files
-############################################################
-
+#----------
 function save!(s::ConfParse, filename::Any = nothing)
     # if data has not been modified and a new file has not
     # been specified, don't write out
@@ -377,58 +326,68 @@ function save!(s::ConfParse, filename::Any = nothing)
     write(s._fh, content)
 end # function save
 
-############################################################
-# retrieve
-# -----
+#----------
 # for retrieving data outside of a block
-############################################################
-
+#----------
 function retrieve(s::ConfParse, key::ASCIIString)
     if (length(s._data[key]) == 1)
         return s._data[key][1]
     end
 
     s._data[key]
-end # method retrieve
+end # function retrieve
 
-############################################################
-# retrieve
-# -----
+#----------
 # for retrieving data from an ini config file block
-############################################################
-
+#----------
 function retrieve(s::ConfParse, block::ASCIIString, key::ASCIIString)
     if (length(s._data[block][key]) == 1)
         return s._data[block][key][1]
     end
 
     s._data[block][key]
-end # method retrieve
+end # function retrieve
 
-############################################################
-# commit!
-# -----
+#----------
+# for retrieving data outside of a block and converting to type
+#----------
+function retrieve(s::ConfParse, key::ASCIIString, t::Type) 
+    if (length(s._data[key]) == 1)
+        return parse(t, s._data[key][1])
+    end
+
+    parse(t, s._data[key])
+end # function retrieve
+
+#----------
+# for retrieving data from an ini config file block and converting to type
+#----------
+function retrieve(s::ConfParse, block::ASCIIString, key::ASCIIString, t::Type) 
+    if (length(s._data[block][key]) == 1)
+        return parse(t, s._data[block][key][1])
+    end
+
+    parse(t, s._data[block][key])
+end # function retrieve
+
+#----------
 # for inserting data in a config file
-############################################################
-
+#----------
 function commit!(s::ConfParse, key::ASCIIString, value::Any)
     s._data[key]   = value
     s._is_modified = true
-end # method commit!
+end # function commit!
 
-############################################################
-# commit!
-# -----
+#----------
 # for inserting data inside an ini file block
-############################################################
-
+#----------
 function commit!(s::ConfParse, block::ASCIIString, key::ASCIIString, values::ASCIIString)
     if (s._syntax != "ini")
-        error("invalid setter method called for syntax type: $(s._syntax)")
+        error("invalid setter function called for syntax type: $(s._syntax)")
     end
 
     s._data[block][key] = [values]
     s._is_modified      = true
-end # method commit!
+end # function commit!
 
 end # module ConfParser
