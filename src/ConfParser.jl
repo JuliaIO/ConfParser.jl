@@ -17,7 +17,7 @@ type ConfParse
         end
 
         _filename = filename
-        _fh = _open_fh(filename, "r") # _fh was defined inside if-statement: so if syntax!="", then _fh is not defined
+        _fh = open_fh(filename, "r") # _fh was defined inside if-statement: so if syntax!="", then _fh is not defined
         if (isempty(syntax))
             _syntax = guess_syntax(_fh)
         else
