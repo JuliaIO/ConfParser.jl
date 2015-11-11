@@ -121,7 +121,7 @@ end # function parse_conf
 # Sperates by commas, removes newlines and such
 #----------
 function parse_line(line::ASCIIString)
-    parsed   = (String)[]
+    parsed   = (AbstractString)[]
     splitted = split(line, ",")
     for raw = splitted
         if (ismatch(r"\S+", raw))
@@ -241,7 +241,7 @@ function craft_content(s::ConfParse)
         for (block, key_values) = s._data
             content *= "[$block]\n"
             for (key, values) = key_values
-                if (typeof(values) == Array{String, 1})
+                if (typeof(values) == Array{AbstractString, 1})
                     content *= "$key=$(join(values, ","))\n"
                 else
                     content *= "$key=$values\n"
@@ -252,7 +252,7 @@ function craft_content(s::ConfParse)
 
     elseif (s._syntax == "http")
         for (key, values) = s._data
-            if (typeof(values) == Array{String, 1})
+            if (typeof(values) == Array{AbstractString, 1})
                 content *= "$key: $(join(values, ","))\n"
             else
                 content *= "$key: $values\n"
@@ -261,7 +261,7 @@ function craft_content(s::ConfParse)
 
     elseif (s._syntax == "simple")
         for (key, values) = s._data
-            if (typeof(values) == Array{String, 1})
+            if (typeof(values) == Array{AbstractString, 1})
                 content *= "$key $(join(values, ","))\n"
             else
                 content *= "$key $values\n"
