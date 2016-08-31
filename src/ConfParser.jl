@@ -17,8 +17,8 @@ type ConfParse
         end
 
         _filename = filename
+        _fh = open_fh(filename, "r") # _fh was defined inside if-statement: so if syntax!="", then _fh is not defined
         if (isempty(syntax))
-            _fh = open_fh(filename, "r")
             _syntax = guess_syntax(_fh)
         else
             if ((syntax != "ini")  &&
@@ -115,6 +115,8 @@ function parse_conf!(s::ConfParse)
     else
         error("unknown configuration syntax: $(s._syntax)")
     end
+    
+    close(s._fh)                # no need to keep file opened
 end # function parse_conf
 
 #----------
@@ -324,6 +326,7 @@ function save!(s::ConfParse, filename::Any = nothing)
     end
     
     write(s._fh, content)
+    close(s._fh)                # if not closed, content is written when julia-session finishes
 end # function save
 
 #----------
