@@ -1,17 +1,20 @@
 module ConfParser
 
+using Compat
+import Compat.String
+
 export ConfParse, parse_conf!, erase!,
        save!, retrieve, commit!
 
 
 type ConfParse
     _fh::IO
-    _filename::ASCIIString
-    _syntax::ASCIIString
+    _filename::String
+    _syntax::String
     _data::Dict
     _is_modified::Bool
 
-    function ConfParse(filename::ASCIIString, syntax::ASCIIString = "")
+    function ConfParse(filename::String, syntax::String = "")
         if (isempty(filename))
             error("no file name specified")
         end
@@ -39,7 +42,7 @@ end # type ConfParse
 #----------
 # open file handler for IO
 #----------
-function open_fh(filename::ASCIIString, mode::ASCIIString)
+function open_fh(filename::String, mode::String)
     try
         fh = open(filename, mode)
         return fh
@@ -122,7 +125,7 @@ end # function parse_conf
 #----------
 # Sperates by commas, removes newlines and such
 #----------
-function parse_line(line::ASCIIString)
+function parse_line(line::String)
     parsed   = (AbstractString)[]
     splitted = split(line, ",")
     for raw = splitted
@@ -164,7 +167,7 @@ function parse_ini(s::ConfParse)
         # parse key/value
         m = match(r"^\s*([^=]*\w)\s*=\s*(.*)\s*$", line)
         if (m != nothing)
-            key::ASCIIString, values::ASCIIString = m.captures
+            key::String, values::String = m.captures
             if (!haskey(s._data, blockname))
                 s._data[blockname] = Dict(key => parse_line(values))
             else
@@ -196,7 +199,7 @@ function parse_http(s::ConfParse)
 
         m = match(r"^\s*([\w-]+)\s*:\s*(.*)$", line)
         if (m != nothing)
-            key::ASCIIString, values::ASCIIString = m.captures
+            key::String, values::String = m.captures
             s._data[key] = parse_line(values)
             continue
         end
@@ -225,7 +228,7 @@ function parse_simple(s::ConfParse)
 
         m = match(r"^\s*([\w-]+)\s+(.*)\s*$", line)
         if (m != nothing)
-            key::ASCIIString, values::ASCIIString = m.captures
+            key::String, values::String = m.captures
             s._data[key] = parse_line(values)
             continue
         end
@@ -280,7 +283,7 @@ end # function craft_content
 #----------
 # remove entry from inside ini block
 #----------
-function erase!(s::ConfParse, block::ASCIIString, key::ASCIIString)
+function erase!(s::ConfParse, block::String, key::String)
     block_key = getkey(s._data, block, nothing)
     if (block_key != nothing)
         if (haskey(s._data[block_key], key))
@@ -294,7 +297,7 @@ end # function erase!
 #----------
 # remove entry from config (outside of block if ini)
 #----------
-function erase!(s::ConfParse, key::ASCIIString)
+function erase!(s::ConfParse, key::String)
     if (haskey(s._data, key))
         delete!(s._data, key)
     end
@@ -332,7 +335,7 @@ end # function save
 #----------
 # for retrieving data outside of a block
 #----------
-function retrieve(s::ConfParse, key::ASCIIString)
+function retrieve(s::ConfParse, key::String)
     if (length(s._data[key]) == 1)
         return s._data[key][1]
     end
@@ -343,7 +346,7 @@ end # function retrieve
 #----------
 # for retrieving data from an ini config file block
 #----------
-function retrieve(s::ConfParse, block::ASCIIString, key::ASCIIString)
+function retrieve(s::ConfParse, block::String, key::String)
     if (length(s._data[block][key]) == 1)
         return s._data[block][key][1]
     end
@@ -354,7 +357,7 @@ end # function retrieve
 #----------
 # for retrieving data outside of a block and converting to type
 #----------
-function retrieve(s::ConfParse, key::ASCIIString, t::Type) 
+function retrieve(s::ConfParse, key::String, t::Type) 
     if (length(s._data[key]) == 1)
         return parse(t, s._data[key][1])
     end
@@ -365,7 +368,7 @@ end # function retrieve
 #----------
 # for retrieving data from an ini config file block and converting to type
 #----------
-function retrieve(s::ConfParse, block::ASCIIString, key::ASCIIString, t::Type) 
+function retrieve(s::ConfParse, block::String, key::String, t::Type) 
     if (length(s._data[block][key]) == 1)
         return parse(t, s._data[block][key][1])
     end
@@ -376,7 +379,7 @@ end # function retrieve
 #----------
 # for inserting data in a config file
 #----------
-function commit!(s::ConfParse, key::ASCIIString, value::Any)
+function commit!(s::ConfParse, key::String, value::Any)
     s._data[key]   = value
     s._is_modified = true
 end # function commit!
@@ -384,7 +387,7 @@ end # function commit!
 #----------
 # for inserting data inside an ini file block
 #----------
-function commit!(s::ConfParse, block::ASCIIString, key::ASCIIString, values::ASCIIString)
+function commit!(s::ConfParse, block::String, key::String, values::String)
     if (s._syntax != "ini")
         error("invalid setter function called for syntax type: $(s._syntax)")
     end
