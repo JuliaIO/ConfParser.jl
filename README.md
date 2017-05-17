@@ -1,29 +1,29 @@
-##ConfParser.jl [![Build Status](https://travis-ci.org/brandonkmiller/ConfParser.jl.svg?branch=master)](https://travis-ci.org/brandonkmiller/ConfParser.jl)
+## ConfParser.jl [![Build Status](https://travis-ci.org/furface/ConfParser.jl.svg?branch=master)](https://travis-ci.org/furface/ConfParser.jl)
 
 ConfParser is a package for parsing, modifying, and writing to configuration
 files.  ConfParser can handle configuration files utilizing multiple syntaxes
 to include INI, HTTP, and simple.
 
-###Synopsis
+### Synopsis
 
-####parse_conf!
+#### parse_conf!
 Reads, parses, and stores configuration file parameters in a dictionary.
 
-####retrieve
+#### retrieve
 Returns a parsed configuration file parameter.
 
-####commit!
+#### commit!
 Writes new configuration file elements into the configuration parameter dictionary.
 
-####erase!
+#### erase!
 Removes an entry from the configuration parameter dictionary.
 
-####save!
+#### save!
 Generates and saves configuration dictionary parameters in specified configuration syntax.
 
-###Examples
+### Examples
 
-####INI Files
+#### INI Files
 
 ```
 header=leheader
@@ -61,7 +61,7 @@ erase!(conf, "foobarness")
 save!(conf, "testout.ini")
 ```
 
-####HTTP Files
+#### HTTP Files
 
 ```
 # this is a comment
@@ -91,7 +91,7 @@ commit!(conf, "email", "newemail@test.com")
 save!(conf)
 ```
 
-####Simple Files
+#### Simple Files
 
 ```
 # this is a comment
