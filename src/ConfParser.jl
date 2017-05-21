@@ -1,5 +1,6 @@
 module ConfParser
 
+import Base.merge!
 using Compat
 import Compat.String
 
@@ -395,5 +396,19 @@ function commit!(s::ConfParse, block::String, key::String, values::String)
     s._data[block][key] = [values]
     s._is_modified      = true
 end # function commit!
+
+#----------
+# for merging data of two configuration files
+#----------
+function merge!(s::ConfParse, t::ConfParse)
+    for (block, key_values) = t._data
+        if (!haskey(s._data, block))
+            s._data[block] = key_values
+        else
+            merge!(s._data[block], key_values)
+        end
+    end
+    s._is_modified = true
+end # function merge!
 
 end # module ConfParser

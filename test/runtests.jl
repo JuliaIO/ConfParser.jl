@@ -1,6 +1,7 @@
 tests = ["testini.jl",
          "testhttp.jl",
-         "testsimple.jl"
+         "testsimple.jl",
+         "testmerge.jl"
 ]
 
 for test in tests
