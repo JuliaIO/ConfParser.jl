@@ -1,3 +1,4 @@
+__precompile__()
 module ConfParser
 
 import Base.merge!
