@@ -1,5 +1,5 @@
 using ConfParser
-using Base.Test
+using Test
 
 conf = ConfParse("confs/config.http")
 parse_conf!(conf)
