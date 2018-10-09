@@ -9,7 +9,7 @@ export ConfParse, parse_conf!, erase!,
        save!, retrieve, commit!
 
 
-type ConfParse
+mutable struct ConfParse
     _fh::IO
     _filename::String
     _syntax::String
@@ -62,12 +62,12 @@ function guess_syntax(fh::IO)
     for line in eachline(fh)
 
         # is a commented line
-        if (ismatch(r"^\s*(?:#|$)", line))
+        if (occursin(r"^\s*(?:#|$)", line))
             continue
         end
 
         # is not alphanumeric
-        if (!ismatch(r"\w", line))
+        if (!occursin(r"\w", line))
             continue
         end
 
@@ -75,25 +75,25 @@ function guess_syntax(fh::IO)
         line = chomp(line)
 
         # contains a [block]; ini
-        if (ismatch(r"^\s*\[\s*[^\]]+\s*\]\s*$", line))
+        if (occursin(r"^\s*\[\s*[^\]]+\s*\]\s*$", line))
             syntax = "ini"
             break
         end
 
         # key/value pairs are seperated by a '='; ini
-        if (ismatch(r"^\s*[\w-]+\s*=\s*.*\s*$", line))
+        if (occursin(r"^\s*[\w-]+\s*=\s*.*\s*$", line))
             syntax = "ini"
             break
         end
 
         # key/value pairs are seperated by a ':'; http
-        if (ismatch(r"^\s*[\w-]+\s*:\s*.*\s*$", line))
+        if (occursin(r"^\s*[\w-]+\s*:\s*.*\s*$", line))
             syntax = "http"
             break
         end
 
         # key/value pairs are seperated by whitespace; simple
-        if (ismatch(r"^\s*[\w-]+\s+.*$", line))
+        if (occursin(r"^\s*[\w-]+\s+.*$", line))
             syntax = "simple"
             break
         end
@@ -120,7 +120,7 @@ function parse_conf!(s::ConfParse)
     else
         error("unknown configuration syntax: $(s._syntax)")
     end
-    
+
     close(s._fh)                # no need to keep file opened
 end # function parse_conf
 
@@ -131,7 +131,7 @@ function parse_line(line::String)
     parsed   = (AbstractString)[]
     splitted = split(line, ",")
     for raw = splitted
-        if (ismatch(r"\S+", raw))
+        if (occursin(r"\S+", raw))
             clean = match(r"\S+", raw)
             push!(parsed, clean.match)
         end
@@ -149,11 +149,11 @@ function parse_ini(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
-        if (ismatch(r"^\s*(\n|\#|;)", line))
+        if (occursin(r"^\s*(\n|\#|;)", line))
             continue
         end
 
-        if (!ismatch(r"\w", line))
+        if (!occursin(r"\w", line))
             continue
         end
 
@@ -189,11 +189,11 @@ function parse_http(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
-        if (ismatch(r"^\s*(\n|\#|;)", line))
+        if (occursin(r"^\s*(\n|\#|;)", line))
             continue
         end
 
-        if (!ismatch(r"\w", line))
+        if (!occursin(r"\w", line))
             continue
         end
 
@@ -218,11 +218,11 @@ function parse_simple(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
-        if (ismatch(r"^\s*(\n|\#|;)", line))
+        if (occursin(r"^\s*(\n|\#|;)", line))
             continue
         end
 
-        if (!ismatch(r"\w", line))
+        if (!occursin(r"\w", line))
             continue
         end
 
@@ -292,7 +292,7 @@ function erase!(s::ConfParse, block::String, key::String)
             delete!(s._data[block_key], key)
         end
     end
-    
+
     s._is_modified = true
 end # function erase!
 
@@ -303,7 +303,7 @@ function erase!(s::ConfParse, key::String)
     if (haskey(s._data, key))
         delete!(s._data, key)
     end
-   
+
     s._is_modified = true
 end # function erase!
 
@@ -329,7 +329,7 @@ function save!(s::ConfParse, filename::Any = nothing)
     else
         s._fh = open_fh(filename, "w")
     end
-    
+
     write(s._fh, content)
     close(s._fh)                # if not closed, content is written when julia-session finishes
 end # function save
@@ -359,7 +359,7 @@ end # function retrieve
 #----------
 # for retrieving data outside of a block and converting to type
 #----------
-function retrieve(s::ConfParse, key::String, t::Type) 
+function retrieve(s::ConfParse, key::String, t::Type)
     if (length(s._data[key]) == 1)
         return parse(t, s._data[key][1])
     end
@@ -370,7 +370,7 @@ end # function retrieve
 #----------
 # for retrieving data from an ini config file block and converting to type
 #----------
-function retrieve(s::ConfParse, block::String, key::String, t::Type) 
+function retrieve(s::ConfParse, block::String, key::String, t::Type)
     if (length(s._data[block][key]) == 1)
         return parse(t, s._data[block][key][1])
     end
