@@ -9,7 +9,7 @@ export ConfParse, parse_conf!, erase!,
        save!, retrieve, commit!
 
 
-type ConfParse
+mutable struct ConfParse
     _fh::IO
     _filename::String
     _syntax::String
@@ -62,12 +62,12 @@ function guess_syntax(fh::IO)
     for line in eachline(fh)
 
         # is a commented line
-        if (ismatch(r"^\s*(?:#|$)", line))
+        if (occursin(r"^\s*(?:#|$)", line))
             continue
         end
 
         # is not alphanumeric
-        if (!ismatch(r"\w", line))
+        if (!occursin(r"\w", line))
             continue
         end
 
@@ -75,25 +75,25 @@ function guess_syntax(fh::IO)
         line = chomp(line)
 
         # contains a [block]; ini
-        if (ismatch(r"^\s*\[\s*[^\]]+\s*\]\s*$", line))
+        if (occursin(r"^\s*\[\s*[^\]]+\s*\]\s*$", line))
             syntax = "ini"
             break
         end
 
         # key/value pairs are seperated by a '='; ini
-        if (ismatch(r"^\s*[\w-]+\s*=\s*.*\s*$", line))
+        if (occursin(r"^\s*[\w-]+\s*=\s*.*\s*$", line))
             syntax = "ini"
             break
         end
 
         # key/value pairs are seperated by a ':'; http
-        if (ismatch(r"^\s*[\w-]+\s*:\s*.*\s*$", line))
+        if (occursin(r"^\s*[\w-]+\s*:\s*.*\s*$", line))
             syntax = "http"
             break
         end
 
         # key/value pairs are seperated by whitespace; simple
-        if (ismatch(r"^\s*[\w-]+\s+.*$", line))
+        if (occursin(r"^\s*[\w-]+\s+.*$", line))
             syntax = "simple"
             break
         end
@@ -131,7 +131,7 @@ function parse_line(line::String)
     parsed   = (AbstractString)[]
     splitted = split(line, ",")
     for raw = splitted
-        if (ismatch(r"\S+", raw))
+        if (occursin(r"\S+", raw))
             clean = match(r"\S+", raw)
             push!(parsed, clean.match)
         end
@@ -149,11 +149,11 @@ function parse_ini(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
-        if (ismatch(r"^\s*(\n|\#|;)", line))
+        if (occursin(r"^\s*(\n|\#|;)", line))
             continue
         end
 
-        if (!ismatch(r"\w", line))
+        if (!occursin(r"\w", line))
             continue
         end
 
@@ -189,11 +189,11 @@ function parse_http(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
-        if (ismatch(r"^\s*(\n|\#|;)", line))
+        if (occursin(r"^\s*(\n|\#|;)", line))
             continue
         end
 
-        if (!ismatch(r"\w", line))
+        if (!occursin(r"\w", line))
             continue
         end
 
@@ -218,11 +218,11 @@ function parse_simple(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
-        if (ismatch(r"^\s*(\n|\#|;)", line))
+        if (occursin(r"^\s*(\n|\#|;)", line))
             continue
         end
 
-        if (!ismatch(r"\w", line))
+        if (!occursin(r"\w", line))
             continue
         end
 

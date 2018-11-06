@@ -1,5 +1,5 @@
-using ConfParser
-using Base.Test
+using ConfParser, Compat
+using Compat.Test
 
 conf = ConfParse("confs/config.simple")
 parse_conf!(conf)
