@@ -6,6 +6,7 @@ parse_conf!(conf)
 
 @test retrieve(conf, "database", "user") == "dbuser"
 @test retrieve(conf, "database", "password") == "abc123"
+@test retrieve(conf, "database", "speed of light (m/s)") == "3e8"
 @test commit!(conf, "default", "database", "newuser") == true
 @test erase!(conf, "foobarness") == true
 save!(conf, "confs/out.conf")
