@@ -167,7 +167,7 @@ function parse_ini(s::ConfParse)
         end
 
         # parse key/value
-        m = match(r"^\s*([^=]*\w)\s*=\s*(.*)\s*$", line)
+        m = match(r"^\s*([^=]*[^\s])\s*=\s*(.*)\s*$", line)
         if (m != nothing)
             key::String, values::String = m.captures
             if (!haskey(s._data, blockname))
