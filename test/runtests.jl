@@ -1,15 +1,13 @@
 tests = ["testini.jl",
          "testhttp.jl",
          "testsimple.jl",
-         "testmerge.jl"
-]
+         "testmerge.jl"]
 
 for test in tests
     include(test)
 end
 
-outfile = "confs/out.conf"
-if isfile(outfile) == true
+outfile = joinpath(@__DIR__, "confs", "out.conf")
+if isfile(outfile)
     rm(outfile)
 end
-
