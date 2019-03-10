@@ -1,0 +1,6 @@
+# Coverage generated files
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+# Pkg generated files
+Manifest.toml
