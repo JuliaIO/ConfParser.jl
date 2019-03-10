@@ -1,4 +1,4 @@
-using ConfParser, Compat
+using ConfParser
 using Test
 
 conf = ConfParse("confs/config.simple")

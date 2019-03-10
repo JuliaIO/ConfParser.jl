@@ -1,8 +1,6 @@
 module ConfParser
 
 import Base.merge!
-using Compat
-import Compat.String
 
 export ConfParse, parse_conf!, erase!,
        save!, retrieve, commit!
