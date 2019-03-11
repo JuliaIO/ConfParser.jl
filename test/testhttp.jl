@@ -1,15 +1,15 @@
-using ConfParser, Compat
+using ConfParser
 using Test
 
-conf = ConfParse("confs/config.http")
+conf = ConfParse(joinpath(@__DIR__, "confs", "config.http"))
 parse_conf!(conf)
 
 @test retrieve(conf, "email")    == "juliarocks@socks.com"
 @test retrieve(conf, "password") == "qwerty"
 @test commit!(conf, "email", "newemail@test.com") == true
-save!(conf, "confs/out.conf")
+save!(conf, joinpath(@__DIR__, "confs", "out.conf"))
 
-conf = ConfParse("confs/out.conf")
+conf = ConfParse(joinpath(@__DIR__, "confs", "out.conf"))
 parse_conf!(conf)
 @test retrieve(conf, "password") == "qwerty"
 @test retrieve(conf, "email") == "newemail@test.com"

@@ -1,12 +1,8 @@
 module ConfParser
 
-import Base.merge!
-using Compat
-import Compat.String
+export ConfParse, parse_conf!, erase!, save!, retrieve, commit!
 
-export ConfParse, parse_conf!, erase!,
-       save!, retrieve, commit!
-
+Base.@deprecate open_fh(filename::String, mode::String) open(filename, mode) false
 
 mutable struct ConfParse
     _fh::IO
@@ -15,40 +11,18 @@ mutable struct ConfParse
     _data::Dict
     _is_modified::Bool
 
-    function ConfParse(filename::String, syntax::String = "")
-        if (isempty(filename))
-            error("no file name specified")
+    function ConfParse(filename::AbstractString, syntax::AbstractString="")
+        isempty(filename) && throw(ArgumentError("no file name specified"))
+        fh = open(filename, "r")
+        if isempty(syntax)
+            syntax = guess_syntax(fh)
+        elseif !(syntax == "ini" || syntax == "http" || syntax == "simple")
+            close(fh)
+            throw(ArgumentError("unrecognized configuration syntax: $syntax"))
         end
-
-        _filename = filename
-        _fh = open_fh(filename, "r") # _fh was defined inside if-statement: so if syntax!="", then _fh is not defined
-        if (isempty(syntax))
-            _syntax = guess_syntax(_fh)
-        else
-            if ((syntax != "ini")  &&
-                (syntax != "http") &&
-                (syntax != "simple"))
-                error("unknown configuration syntax: $(syntax)")
-            end
-            _syntax = syntax
-        end
-        _data        = Dict()
-        _is_modified = false
-        new(_fh, _filename, _syntax,
-            _data, _is_modified)
-    end # function ConfParse
-
-end # type ConfParse
-
-#----------
-# open file handler for IO
-#----------
-function open_fh(filename::String, mode::String)
-    try
-        fh = open(filename, mode)
-        return fh
-    catch
-        error("configuration file could not be opened")
+        conf = new(fh, filename, syntax, Dict(), false)
+        finalizer(c->close(c._fh), conf)
+        return conf
     end
 end
 
@@ -57,87 +31,62 @@ end
 # regular expressions
 #----------
 function guess_syntax(fh::IO)
-    syntax = ""
     for line in eachline(fh)
-
         # is a commented line
-        if (occursin(r"^\s*(?:#|$)", line))
-            continue
-        end
+        occursin(r"^\s*(?:#|$)", line) && continue
 
         # is not alphanumeric
-        if (!occursin(r"\w", line))
-            continue
-        end
+        occursin(r"\w", line) || continue
 
         # remove \n
         line = chomp(line)
 
         # contains a [block]; ini
-        if (occursin(r"^\s*\[\s*[^\]]+\s*\]\s*$", line))
-            syntax = "ini"
-            break
-        end
+        occursin(r"^\s*\[\s*[^\]]+\s*\]\s*$", line) && return "ini"
 
         # key/value pairs are seperated by a '='; ini
-        if (occursin(r"^\s*[\w-]+\s*=\s*.*\s*$", line))
-            syntax = "ini"
-            break
-        end
+        occursin(r"^\s*[\w-]+\s*=\s*.*\s*$", line) && return "ini"
 
         # key/value pairs are seperated by a ':'; http
-        if (occursin(r"^\s*[\w-]+\s*:\s*.*\s*$", line))
-            syntax = "http"
-            break
-        end
+        occursin(r"^\s*[\w-]+\s*:\s*.*\s*$", line) && return "http"
 
         # key/value pairs are seperated by whitespace; simple
-        if (occursin(r"^\s*[\w-]+\s+.*$", line))
-            syntax = "simple"
-            break
-        end
-    end
-
-    if (syntax != "")
-        return syntax
+        occursin(r"^\s*[\w-]+\s+.*$", line) && return "simple"
     end
 
     error("unable to identify the configuration file syntax")
-end # function guess_syntax
+end
 
 #----------
 # tasks appropriate parser function based on configuration
 # syntax
 #----------
 function parse_conf!(s::ConfParse)
-    if (s._syntax == "ini")
+    if s._syntax == "ini"
         parse_ini(s)
-    elseif (s._syntax == "http")
+    elseif s._syntax == "http"
         parse_http(s)
-    elseif (s._syntax == "simple")
+    elseif s._syntax == "simple"
         parse_simple(s)
     else
         error("unknown configuration syntax: $(s._syntax)")
     end
-    
-    close(s._fh)                # no need to keep file opened
-end # function parse_conf
+end
 
 #----------
 # Sperates by commas, removes newlines and such
 #----------
 function parse_line(line::String)
-    parsed   = (AbstractString)[]
+    parsed   = String[]
     splitted = split(line, ",")
     for raw = splitted
-        if (occursin(r"\S+", raw))
+        if occursin(r"\S+", raw)
             clean = match(r"\S+", raw)
             push!(parsed, clean.match)
         end
     end
-
     parsed
-end # function parse_line
+end
 
 #----------
 # parses configuration files utilizing ini sytnax.
@@ -148,37 +97,35 @@ function parse_ini(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
-        if (occursin(r"^\s*(\n|\#|;)", line))
-            continue
-        end
+        occursin(r"^\s*(\n|\#|;)", line) && continue
 
-        if (!occursin(r"\w", line))
-            continue
-        end
+        occursin(r"\w", line) || continue
 
         line = chomp(line)
 
         # parse blockname
         m = match(r"^\s*\[\s*([^\]]+)\s*\]$", line)
-        if (m != nothing)
+        if m !== nothing
             blockname = lowercase(m.captures[1])
             continue
         end
 
         # parse key/value
         m = match(r"^\s*([^=]*[^\s])\s*=\s*(.*)\s*$", line)
-        if (m != nothing)
+        if m !== nothing
             key::String, values::String = m.captures
-            if (!haskey(s._data, blockname))
+            if !haskey(s._data, blockname)
                 s._data[blockname] = Dict(key => parse_line(values))
             else
                 merge!(s._data[blockname], Dict(key => parse_line(values)))
             end
             continue
         end
+
         error("invalid syntax on line: $(line)")
     end
-end # function parse_ini
+    nothing
+end
 
 #----------
 # parses configuration files utilizing http sytnax.
@@ -188,18 +135,14 @@ function parse_http(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
-        if (occursin(r"^\s*(\n|\#|;)", line))
-            continue
-        end
+        occursin(r"^\s*(\n|\#|;)", line) && continue
 
-        if (!occursin(r"\w", line))
-            continue
-        end
+        occursin(r"\w", line) || continue
 
         line = chomp(line)
 
         m = match(r"^\s*([\w-]+)\s*:\s*(.*)$", line)
-        if (m != nothing)
+        if m !== nothing
             key::String, values::String = m.captures
             s._data[key] = parse_line(values)
             continue
@@ -207,7 +150,7 @@ function parse_http(s::ConfParse)
 
         error("invalid syntax on line: $(line)")
     end
-end # function parse_http
+end
 
 #----------
 # parses configuration files utilizing simple syntax.
@@ -217,18 +160,14 @@ function parse_simple(s::ConfParse)
     seekstart(s._fh)
     for line in eachline(s._fh)
         # skip comments and newlines
-        if (occursin(r"^\s*(\n|\#|;)", line))
-            continue
-        end
+        occursin(r"^\s*(\n|\#|;)", line) && continue
 
-        if (!occursin(r"\w", line))
-            continue
-        end
+        occursin(r"\w", line) || continue
 
         line = chomp(line)
 
         m = match(r"^\s*([\w-]+)\s+(.*)\s*$", line)
-        if (m != nothing)
+        if m !== nothing
             key::String, values::String = m.captures
             s._data[key] = parse_line(values)
             continue
@@ -236,146 +175,134 @@ function parse_simple(s::ConfParse)
 
         error("invalid syntax on line: $(line)")
     end
-end # function parse_simple
+    nothing
+end
 
 #----------
 # craft content strings from data array for saved config
 #----------
 function craft_content(s::ConfParse)
-   content = ""
-   if (s._syntax == "ini")
+   content = IOBuffer()
+   if s._syntax == "ini"
         for (block, key_values) = s._data
-            content *= "[$block]\n"
+            println(content, "[$block]")
             for (key, values) = key_values
-                if (typeof(values) == Array{AbstractString, 1})
-                    content *= "$key=$(join(values, ","))\n"
+                if values isa Vector{<:AbstractString}
+                    print(content, key, '=')
+                    join(content, values, ',')
+                    println(content)
                 else
-                    content *= "$key=$values\n"
+                    println(content, key, '=', values)
                 end
             end
-            content *= "\n"
+            println(content)
         end
-
-    elseif (s._syntax == "http")
+    elseif s._syntax == "http"
         for (key, values) = s._data
-            if (typeof(values) == Array{AbstractString, 1})
-                content *= "$key: $(join(values, ","))\n"
+            if values isa Vector{<:AbstractString}
+                print(content, key, ": ")
+                join(content, values, ',')
+                println(content)
             else
-                content *= "$key: $values\n"
+                println(content, key, ": ", values)
             end
         end
-
-    elseif (s._syntax == "simple")
+    elseif s._syntax == "simple"
         for (key, values) = s._data
-            if (typeof(values) == Array{AbstractString, 1})
-                content *= "$key $(join(values, ","))\n"
+            if values isa Vector{<:AbstractString}
+                print(content, key, ' ')
+                join(content, values, ',')
+                println(content)
             else
-                content *= "$key $values\n"
+                println(content, key, ' ', values)
             end
         end
-
     else
         error("unknown syntax type: $(s._syntax)")
     end
-
-    content
-end # function craft_content
+    String(take!(content))
+end
 
 #----------
 # remove entry from inside ini block
 #----------
 function erase!(s::ConfParse, block::String, key::String)
     block_key = getkey(s._data, block, nothing)
-    if (block_key != nothing)
-        if (haskey(s._data[block_key], key))
+    if block_key !== nothing
+        if haskey(s._data[block_key], key)
             delete!(s._data[block_key], key)
+            s._is_modified = true
         end
     end
-    
-    s._is_modified = true
-end # function erase!
+    s._is_modified
+end
 
 #----------
 # remove entry from config (outside of block if ini)
 #----------
 function erase!(s::ConfParse, key::String)
-    if (haskey(s._data, key))
+    if haskey(s._data, key)
         delete!(s._data, key)
+        s._is_modified = true
     end
-   
-    s._is_modified = true
-end # function erase!
+    s._is_modified
+end
 
 #----------
 # for writing out new or modified configuration files
 #----------
-function save!(s::ConfParse, filename::Any = nothing)
+function save!(s::ConfParse, filename=nothing)
     # if data has not been modified and a new file has not
     # been specified, don't write out
-    if (s._is_modified == false) && (filename == nothing)
-        return
-    end
+    !s._is_modified && filename === nothing && return
 
     # if there is no content to write out, don't create an
     # empty file
     content = craft_content(s)
-    if (content == nothing)
-        return
+    content === nothing && return
+
+    if filename === nothing
+        s._fh = open(s._filename, "w")
+    else
+        s._fh = open(filename, "w")
     end
 
-    if (filename == nothing)
-        s._fh = open_fh(s._filename, "w")
-    else
-        s._fh = open_fh(filename, "w")
-    end
-    
     write(s._fh, content)
-    close(s._fh)                # if not closed, content is written when julia-session finishes
-end # function save
+    flush(s._fh)
+    nothing
+end
 
 #----------
 # for retrieving data outside of a block
 #----------
 function retrieve(s::ConfParse, key::String)
-    if (length(s._data[key]) == 1)
-        return s._data[key][1]
-    end
-
-    s._data[key]
-end # function retrieve
+    k = s._data[key]
+    length(k) == 1 ? first(k) : k
+end
 
 #----------
 # for retrieving data from an ini config file block
 #----------
 function retrieve(s::ConfParse, block::String, key::String)
-    if (length(s._data[block][key]) == 1)
-        return s._data[block][key][1]
-    end
-
-    s._data[block][key]
-end # function retrieve
+    k = s._data[block][key]
+    length(k) == 1 ? first(k) : k
+end
 
 #----------
 # for retrieving data outside of a block and converting to type
 #----------
-function retrieve(s::ConfParse, key::String, t::Type) 
-    if (length(s._data[key]) == 1)
-        return parse(t, s._data[key][1])
-    end
-
-    parse(t, s._data[key])
-end # function retrieve
+function retrieve(s::ConfParse, key::String, t::Type)
+    k = s._data[key]
+    parse(t, length(k) == 1 ? first(k) : k)
+end
 
 #----------
 # for retrieving data from an ini config file block and converting to type
 #----------
-function retrieve(s::ConfParse, block::String, key::String, t::Type) 
-    if (length(s._data[block][key]) == 1)
-        return parse(t, s._data[block][key][1])
-    end
-
-    parse(t, s._data[block][key])
-end # function retrieve
+function retrieve(s::ConfParse, block::String, key::String, t::Type)
+    k = s._data[block][key]
+    parse(t, length(k) == 1 ? first(k) : k)
+end
 
 #----------
 # for inserting data in a config file
@@ -383,32 +310,31 @@ end # function retrieve
 function commit!(s::ConfParse, key::String, value::Any)
     s._data[key]   = value
     s._is_modified = true
-end # function commit!
+end
 
 #----------
 # for inserting data inside an ini file block
 #----------
 function commit!(s::ConfParse, block::String, key::String, values::String)
-    if (s._syntax != "ini")
-        error("invalid setter function called for syntax type: $(s._syntax)")
+    if s._syntax != "ini"
+        throw(ArgumentError("invalid setter function called for syntax type: $(s._syntax)"))
     end
-
     s._data[block][key] = [values]
     s._is_modified      = true
-end # function commit!
+end
 
 #----------
 # for merging data of two configuration files
 #----------
-function merge!(s::ConfParse, t::ConfParse)
+function Base.merge!(s::ConfParse, t::ConfParse)
     for (block, key_values) = t._data
-        if (!haskey(s._data, block))
+        if !haskey(s._data, block)
             s._data[block] = key_values
         else
             merge!(s._data[block], key_values)
         end
     end
     s._is_modified = true
-end # function merge!
+end
 
 end # module ConfParser
