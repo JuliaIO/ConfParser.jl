@@ -227,7 +227,7 @@ end
 # remove entry from inside ini block
 #----------
 function erase!(s::ConfParse, block::String, key::String)
-    block_key = getkey(s._data, block, nothing)
+    block_key = getkey(s._data, lowercase(block), nothing)
     if block_key !== nothing
         if haskey(s._data[block_key], key)
             delete!(s._data[block_key], key)
@@ -284,7 +284,7 @@ end
 # for retrieving data from an ini config file block
 #----------
 function retrieve(s::ConfParse, block::String, key::String)
-    k = s._data[block][key]
+    k = s._data[lowercase(block)][key]
     length(k) == 1 ? first(k) : k
 end
 
@@ -300,7 +300,7 @@ end
 # for retrieving data from an ini config file block and converting to type
 #----------
 function retrieve(s::ConfParse, block::String, key::String, t::Type)
-    k = s._data[block][key]
+    k = s._data[lowercase(block)][key]
     parse(t, length(k) == 1 ? first(k) : k)
 end
 
@@ -319,8 +319,8 @@ function commit!(s::ConfParse, block::String, key::String, values::String)
     if s._syntax != "ini"
         throw(ArgumentError("invalid setter function called for syntax type: $(s._syntax)"))
     end
-    s._data[block][key] = [values]
-    s._is_modified      = true
+    s._data[lowercase(block)][key] = [values]
+    s._is_modified                 = true
 end
 
 #----------

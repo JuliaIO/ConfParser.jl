@@ -7,8 +7,12 @@ parse_conf!(conf)
 @test retrieve(conf, "database", "user") == "dbuser"
 @test retrieve(conf, "database", "password") == "abc123"
 @test retrieve(conf, "database", "speed of light (m/s)") == "3e8"
+@test retrieve(conf, "Database", "user") == "dbuser"
+@test retrieve(conf, "Case", "bar") == "foo"
 @test commit!(conf, "default", "database", "newuser")
 @test erase!(conf, "foobarness")
+@test erase!(conf, "Case", "bye")
+@test_throws KeyError retrieve(conf, "Case", "bye")
 save!(conf, joinpath(@__DIR__, "confs", "out.conf"))
 
 # validate new conf write
