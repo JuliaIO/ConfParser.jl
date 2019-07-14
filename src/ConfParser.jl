@@ -337,4 +337,14 @@ function Base.merge!(s::ConfParse, t::ConfParse)
     s._is_modified = true
 end
 
+#----------
+# for checking if a key exists.
+#----------
+Base.haskey(s::ConfParse, key::String) = haskey(s._data, key)
+
+#----------
+# for checking if a key exists inside an ini file block
+#----------
+Base.haskey(s::ConfParse, block::String, key::String) = haskey(s._data, block) && haskey(s._data[block], key)
+
 end # module ConfParser
