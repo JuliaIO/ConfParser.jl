@@ -1,4 +1,4 @@
-## ConfParser.jl [![Build Status](https://travis-ci.org/JuliaIO/ConfParser.jl.svg?branch=master)](https://travis-ci.org/JuliaIO/ConfParser.jl)
+## ConfParser.jl [![Build Status](https://travis-ci.org/JuliaIO/ConfParser.jl.svg?branch=master)](https://travis-ci.org/JuliaIO/ConfParser.jl) [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://pkg.julialang.org/docs/ConfParser/)
 
 ConfParser is a package for parsing, modifying, and writing to configuration
 files.  ConfParser can handle configuration files utilizing multiple syntaxes
