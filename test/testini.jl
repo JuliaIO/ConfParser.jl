@@ -11,6 +11,9 @@ parse_conf!(conf)
 @test retrieve(conf, "Case", "bar") == "foo"
 @test commit!(conf, "default", "database", "newuser")
 @test erase!(conf, "foobarness")
+@test haskey(conf, "database", "user") == true
+@test haskey(conf, "database", "nothere") == false
+@test haskey(conf, "nothere", "foo") == false
 @test erase!(conf, "Case", "bye")
 @test_throws KeyError retrieve(conf, "Case", "bye")
 save!(conf, joinpath(@__DIR__, "confs", "out.conf"))
