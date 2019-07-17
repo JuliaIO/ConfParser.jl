@@ -1,31 +1,16 @@
-## ConfParser.jl 
-[![Build Status](https://travis-ci.org/JuliaIO/ConfParser.jl.svg?branch=master)](https://travis-ci.org/JuliaIO/ConfParser.jl) [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://pkg.julialang.org/docs/ConfParser/)
+# ConfParser.jl
 
-ConfParser is a package for parsing, modifying, and writing to configuration
-files.  ConfParser can handle configuration files utilizing multiple syntaxes
-to include INI, HTTP, and simple.
+ConfParser is a package for parsing, modifying, and writing to configuration files. ConfParser can handle configuration files utilizing multiple syntaxes to include INI, HTTP, and simple.
 
-### Synopsis
+## Index
 
-#### parse_conf!
-Reads, parses, and stores configuration file parameters in a dictionary.
+```@index
+Pages = ["index.md"]
+```
 
-#### retrieve
-Returns a parsed configuration file parameter.
+## Examples
 
-#### commit!
-Writes new configuration file elements into the configuration parameter dictionary.
-
-#### erase!
-Removes an entry from the configuration parameter dictionary.
-
-#### save!
-Generates and saves configuration dictionary parameters in specified configuration syntax.
-
-### Examples
-
-#### INI Files
-
+### INI Files
 ```
 header=leheader
 
@@ -62,7 +47,7 @@ erase!(conf, "foobarness")
 save!(conf, "testout.ini")
 ```
 
-#### HTTP Files
+### HTTP Files
 
 ```
 # this is a comment
@@ -92,13 +77,13 @@ commit!(conf, "email", "newemail@test.com")
 save!(conf)
 ```
 
-#### Simple Files
+### Simple Files
 
 ```
 # this is a comment
 protocol kreberos
 port 6643
-user                root
+user root
 
 # this is another comment
 foobar barfoo
@@ -120,4 +105,18 @@ erase!(conf, "protocol")
 
 # generate new config from data
 save!(conf, "outconf.simple")
+```
+
+## Public Interface
+
+```@autodocs
+Modules = [ConfParser]
+Private = false
+```
+
+## Internals
+
+```@autodocs
+Modules = [ConfParser]
+Public = true
 ```
