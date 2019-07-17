@@ -16,6 +16,8 @@ parse_conf!(conf)
 @test haskey(conf, "nothere", "foo") == false
 @test erase!(conf, "Case", "bye")
 @test_throws KeyError retrieve(conf, "Case", "bye")
+@test haskey(conf, "Case", "bar") == true
+@test haskey(conf, "case", "bar") == true
 save!(conf, joinpath(@__DIR__, "confs", "out.conf"))
 
 # validate new conf write

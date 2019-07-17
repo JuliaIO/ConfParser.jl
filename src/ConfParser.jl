@@ -256,7 +256,7 @@ end
 
 """
     erase!(s::ConfParse, key::String)
-    
+
 Remove entry from config (outside of block if ini).
 """
 function erase!(s::ConfParse, key::String)
@@ -384,6 +384,6 @@ haskey(s::ConfParse, key::String) = haskey(s._data, key)
 
 Check if a key exists inside an ini file block.
 """
-haskey(s::ConfParse, block::String, key::String) = haskey(s._data, block) && haskey(s._data[block], key)
+haskey(s::ConfParse, block::String, key::String) = haskey(s._data, lowercase(block)) && haskey(s._data[lowercase(block)], key)
 
 end # module ConfParser
