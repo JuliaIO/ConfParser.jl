@@ -107,6 +107,29 @@ erase!(conf, "protocol")
 save!(conf, "outconf.simple")
 ```
 
+#### Key-Only Files
+
+```
+e613ef71d63b84b721bdd345a5708ce5738028
+```
+
+```julia
+using ConfParser
+
+conf = ConfParse("confs/config.keyonly")
+parse_conf!(conf)
+
+# store config items in vars
+key = retrieve(conf, "key") # the key is stored as "key"
+
+# update config parameter
+commit!(conf, "key","e714ef71d63b84b721bdd345a5708ce5738028b")
+
+# generate new config from data
+save!(conf, "outconf.keyonly")
+```
+
+
 ## Public Interface
 
 ```@autodocs
