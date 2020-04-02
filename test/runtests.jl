@@ -1,7 +1,8 @@
 tests = ["testini.jl",
          "testhttp.jl",
          "testsimple.jl",
-         "testmerge.jl"]
+         "testmerge.jl",
+         "testkeyonly.jl"]
 
 for test in tests
     include(test)

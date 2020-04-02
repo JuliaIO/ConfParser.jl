@@ -18,7 +18,7 @@ mutable struct ConfParse
         fh = open(filename, "r")
         if isempty(syntax)
             syntax = guess_syntax(fh)
-        elseif !(syntax == "ini" || syntax == "http" || syntax == "simple")
+        elseif !(syntax == "ini" || syntax == "http" || syntax == "simple" || syntax == "keyonly")
             close(fh)
             throw(ArgumentError("unrecognized configuration syntax: $syntax"))
         end
@@ -35,27 +35,34 @@ Attempts to guess the configuration file syntax using
 regular expressions.
 """
 function guess_syntax(fh::IO)
-    for line in eachline(fh)
-        # is a commented line
-        occursin(r"^\s*(?:#|$)", line) && continue
+    cnt = countlines(fh)
+    seekstart(fh)
+    if cnt == 1
+        value = String(strip(read(fh, String)))
+        all(isxdigit, value) && return "keyonly"
+    else
+        for line in eachline(fh)
+            # is a commented line
+            occursin(r"^\s*(?:#|$)", line) && continue
 
-        # is not alphanumeric
-        occursin(r"\w", line) || continue
+            # is not alphanumeric
+            occursin(r"\w", line) || continue
 
-        # remove \n
-        line = chomp(line)
+            # remove \n
+            line = chomp(line)
 
-        # contains a [block]; ini
-        occursin(r"^\s*\[\s*[^\]]+\s*\]\s*$", line) && return "ini"
+            # contains a [block]; ini
+            occursin(r"^\s*\[\s*[^\]]+\s*\]\s*$", line) && return "ini"
 
-        # key/value pairs are seperated by a '='; ini
-        occursin(r"^\s*[\w-]+\s*=\s*.*\s*$", line) && return "ini"
+            # key/value pairs are seperated by a '='; ini
+            occursin(r"^\s*[\w-]+\s*=\s*.*\s*$", line) && return "ini"
 
-        # key/value pairs are seperated by a ':'; http
-        occursin(r"^\s*[\w-]+\s*:\s*.*\s*$", line) && return "http"
+            # key/value pairs are seperated by a ':'; http
+            occursin(r"^\s*[\w-]+\s*:\s*.*\s*$", line) && return "http"
 
-        # key/value pairs are seperated by whitespace; simple
-        occursin(r"^\s*[\w-]+\s+.*$", line) && return "simple"
+            # key/value pairs are seperated by whitespace; simple
+            occursin(r"^\s*[\w-]+\s+.*$", line) && return "simple"
+        end
     end
 
     error("unable to identify the configuration file syntax")
@@ -73,6 +80,8 @@ function parse_conf!(s::ConfParse)
         parse_http(s)
     elseif s._syntax == "simple"
         parse_simple(s)
+    elseif s._syntax == "keyonly"
+        parse_keyonly(s)
     else
         error("unknown configuration syntax: $(s._syntax)")
     end
@@ -192,6 +201,26 @@ function parse_simple(s::ConfParse)
 end
 
 """
+    parse_keyonly(s::ConfParse)
+
+Parses configuration files utilizing keyonly syntax.
+Populates the ConfParser.data dictionary.
+"""
+function parse_keyonly(s::ConfParse)
+    seekstart(s._fh)
+    countlines(s._fh) != 1 && error("keyonly syntax requires a single line.")
+    seekstart(s._fh)
+    value = String(strip(read(s._fh, String)))
+    if !all(isxdigit, value)
+        error("Invalid characters in keyonly conf: $(value)")
+    end
+    s._data["key"] = value
+    
+    nothing
+end
+
+
+"""
     craft_content(s::ConfParse)
 
 Craft content strings from data array for saved config.
@@ -232,6 +261,8 @@ function craft_content(s::ConfParse)
                 println(content, key, ' ', values)
             end
         end
+    elseif s._syntax == "keyonly"
+        println(content,s._data["key"])
     else
         error("unknown syntax type: $(s._syntax)")
     end
@@ -287,7 +318,7 @@ function save!(s::ConfParse, filename=nothing)
     else
         s._fh = open(filename, "w")
     end
-
+    
     write(s._fh, content)
     flush(s._fh)
     nothing
