@@ -417,4 +417,7 @@ Check if a key exists inside an ini file block.
 """
 haskey(s::ConfParse, block::String, key::String) = haskey(s._data, lowercase(block)) && haskey(s._data[lowercase(block)], key)
 
+Base.Dict(s::ConfParse) = s._data
+Base.convert(::Type{Dict}, s::ConfParse) = s._data
+
 end # module ConfParser
