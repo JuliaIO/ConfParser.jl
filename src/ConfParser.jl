@@ -275,12 +275,10 @@ end
 Remove entry from ini block.
 """
 function erase!(s::ConfParse, block::String, key::String)
-    block_key = getkey(s._data, lowercase(block), nothing)
-    if block_key !== nothing
-        if haskey(s._data[block_key], key)
-            delete!(s._data[block_key], key)
-            s._is_modified = true
-        end
+    block = get(s._data, lowercase(block), nothing)
+    if block !== nothing && haskey(block, key)
+        delete!(block, key)
+        s._is_modified = true
     end
     s._is_modified
 end
